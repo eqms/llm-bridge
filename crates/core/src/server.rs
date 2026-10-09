@@ -51,9 +51,7 @@ pub fn router(state: Arc<ProxyState>) -> Router {
 pub async fn start(state: Arc<ProxyState>) -> Result<ProxyHandle, String> {
     let cfg = state.config();
     let bind = format!("{}:{}", cfg.server.host, cfg.server.port);
-    let listener = tokio::net::TcpListener::bind(&bind)
-        .await
-        .map_err(|e| format!("{bind}: {e}"))?;
+    let listener = tokio::net::TcpListener::bind(&bind).await.map_err(|e| format!("{bind}: {e}"))?;
     let addr = listener.local_addr().map_err(|e| e.to_string())?;
     let (tx, rx) = oneshot::channel::<()>();
     let app = router(state);

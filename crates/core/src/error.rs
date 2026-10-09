@@ -37,9 +37,7 @@ impl ProxyError {
             ProxyError::UnsupportedMediaType(_) => StatusCode::UNSUPPORTED_MEDIA_TYPE,
             ProxyError::ModelNotFound(_) => StatusCode::NOT_FOUND,
             ProxyError::MissingApiKey(_) => StatusCode::UNAUTHORIZED,
-            ProxyError::Upstream { status, .. } => {
-                StatusCode::from_u16(*status).unwrap_or(StatusCode::BAD_GATEWAY)
-            }
+            ProxyError::Upstream { status, .. } => StatusCode::from_u16(*status).unwrap_or(StatusCode::BAD_GATEWAY),
             ProxyError::Connect(_) => StatusCode::BAD_GATEWAY,
             ProxyError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }

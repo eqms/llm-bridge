@@ -4,7 +4,11 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 #[derive(Parser)]
-#[command(name = "llm-bridge", version, about = "OpenAI-kompatibler Mini-Proxy für Anthropic-Endpunkte (z. B. LangDock)")]
+#[command(
+    name = "llm-bridge",
+    version,
+    about = "OpenAI-kompatibler Mini-Proxy für Anthropic-Endpunkte (z. B. LangDock)"
+)]
 struct Cli {
     /// Pfad zur Konfiguration (Standard: Nutzer-Konfigurationsverzeichnis)
     #[arg(long, global = true, env = "LLM_BRIDGE_CONFIG")]
@@ -73,7 +77,8 @@ fn fmt_n(n: u64) -> String {
 async fn main() -> ExitCode {
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,hyper=warn,reqwest=warn".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "info,hyper=warn,reqwest=warn".into()),
         )
         .with_target(false)
         .init();
@@ -91,7 +96,8 @@ async fn run(cli: Cli) -> Result<(), String> {
     let db_path = cli.db.clone().unwrap_or_else(config::default_db_path);
     let mut cfg = Config::load_or_init(&config_path)?;
     let stats = || Stats::open(&db_path);
-    let parse_range = |r: &str| Range::parse(r).ok_or_else(|| format!("Unbekannter Zeitraum '{r}' (24h, 7d, 30d, 90d, all)"));
+    let parse_range =
+        |r: &str| Range::parse(r).ok_or_else(|| format!("Unbekannter Zeitraum '{r}' (24h, 7d, 30d, 90d, all)"));
 
     match cli.cmd {
         Cmd::Serve { host, port } => {
@@ -130,13 +136,25 @@ async fn run(cli: Cli) -> Result<(), String> {
             if !report.by_model.is_empty() {
                 println!("\nNach Modell:");
                 for g in &report.by_model {
-                    println!("  {:<24} {:>6} Anfr.  {:>12} in  {:>12} out", g.key, g.requests, fmt_n(g.input_tokens), fmt_n(g.output_tokens));
+                    println!(
+                        "  {:<24} {:>6} Anfr.  {:>12} in  {:>12} out",
+                        g.key,
+                        g.requests,
+                        fmt_n(g.input_tokens),
+                        fmt_n(g.output_tokens)
+                    );
                 }
             }
             if !report.by_client.is_empty() {
                 println!("\nNach Client:");
                 for g in &report.by_client {
-                    println!("  {:<24} {:>6} Anfr.  {:>12} in  {:>12} out", g.key, g.requests, fmt_n(g.input_tokens), fmt_n(g.output_tokens));
+                    println!(
+                        "  {:<24} {:>6} Anfr.  {:>12} in  {:>12} out",
+                        g.key,
+                        g.requests,
+                        fmt_n(g.input_tokens),
+                        fmt_n(g.output_tokens)
+                    );
                 }
             }
         }
@@ -155,7 +173,8 @@ async fn run(cli: Cli) -> Result<(), String> {
             if cfg.upstream(&upstream).is_none() {
                 return Err(format!("Unbekannter Upstream '{upstream}'"));
             }
-            let key = rpassword::prompt_password(format!("API-Schlüssel für {upstream}: ")).map_err(|e| e.to_string())?;
+            let key =
+                rpassword::prompt_password(format!("API-Schlüssel für {upstream}: ")).map_err(|e| e.to_string())?;
             secrets::set_api_key(&upstream, &key)?;
             println!("Gespeichert.");
         }
@@ -172,7 +191,13 @@ async fn run(cli: Cli) -> Result<(), String> {
         Cmd::Test { model } => {
             let state = ProxyState::new(cfg, stats()?);
             let r = state.test_route(&model).await;
-            println!("{} – HTTP {} in {} ms: {}", if r.ok { "OK" } else { "FEHLER" }, r.status, r.latency_ms, r.message);
+            println!(
+                "{} – HTTP {} in {} ms: {}",
+                if r.ok { "OK" } else { "FEHLER" },
+                r.status,
+                r.latency_ms,
+                r.message
+            );
             if !r.ok {
                 return Err("Test fehlgeschlagen".into());
             }
@@ -183,7 +208,13 @@ async fn run(cli: Cli) -> Result<(), String> {
             println!("Statistik:   {}", db_path.display());
             println!("Endpunkt:    http://{}:{}/v1", cfg.server.host, cfg.server.port);
             for u in &cfg.upstreams {
-                println!("Upstream:    {} ({}) → {}  [Schlüssel: {:?}]", u.id, u.name, u.messages_url(), secrets::key_source(u));
+                println!(
+                    "Upstream:    {} ({}) → {}  [Schlüssel: {:?}]",
+                    u.id,
+                    u.name,
+                    u.messages_url(),
+                    secrets::key_source(u)
+                );
             }
         }
     }

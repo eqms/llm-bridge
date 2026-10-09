@@ -1,0 +1,3 @@
+# Matches the compact style of the code base (single-line struct literals, long chains).
+max_width = 120
+use_small_heuristics = "Max"

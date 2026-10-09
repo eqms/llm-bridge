@@ -183,7 +183,8 @@ impl ProxyState {
                 sse_stream(resp, client_model, translated.include_usage, recorder).boxed()
             } else {
                 // Upstream hat trotz stream=true JSON geliefert → als Stream nachbilden
-                let v: Value = resp.json().await.map_err(|e| ProxyError::Upstream { status: 502, message: e.to_string() })?;
+                let v: Value =
+                    resp.json().await.map_err(|e| ProxyError::Upstream { status: 502, message: e.to_string() })?;
                 json_as_stream(v, client_model, translated.include_usage, recorder).boxed()
             };
             return Ok(Response::builder()
@@ -398,7 +399,8 @@ impl StreamState {
                     Some("input_json_delta") => {
                         let ti = self.tool_index.get(&idx).copied().unwrap_or(0);
                         let part = delta.get("partial_json").and_then(Value::as_str).unwrap_or("");
-                        vec![self.chunk(json!({ "tool_calls": [{ "index": ti, "function": { "arguments": part } }] }), None)]
+                        vec![self
+                            .chunk(json!({ "tool_calls": [{ "index": ti, "function": { "arguments": part } }] }), None)]
                     }
                     _ => vec![], // thinking_delta, signature_delta …
                 }

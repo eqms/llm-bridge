@@ -78,11 +78,9 @@ fn image_block(url: &str) -> Value {
 fn flatten_text(content: &Value) -> String {
     match content {
         Value::String(s) => s.clone(),
-        Value::Array(parts) => parts
-            .iter()
-            .filter_map(|p| p.get("text").and_then(Value::as_str))
-            .collect::<Vec<_>>()
-            .join("\n"),
+        Value::Array(parts) => {
+            parts.iter().filter_map(|p| p.get("text").and_then(Value::as_str)).collect::<Vec<_>>().join("\n")
+        }
         Value::Null => String::new(),
         other => other.to_string(),
     }
@@ -94,14 +92,9 @@ fn content_blocks(content: &Value) -> Vec<Value> {
         Value::Array(parts) => parts
             .iter()
             .filter_map(|p| match p.get("type").and_then(Value::as_str) {
-                Some("text") | Some("input_text") => {
-                    p.get("text").and_then(Value::as_str).and_then(text_block)
-                }
+                Some("text") | Some("input_text") => p.get("text").and_then(Value::as_str).and_then(text_block),
                 Some("image_url") => {
-                    let url = p
-                        .pointer("/image_url/url")
-                        .or_else(|| p.get("image_url"))
-                        .and_then(Value::as_str)?;
+                    let url = p.pointer("/image_url/url").or_else(|| p.get("image_url")).and_then(Value::as_str)?;
                     Some(image_block(url))
                 }
                 _ => None,
@@ -267,10 +260,7 @@ pub fn openai_to_anthropic(
     if stream {
         out.insert("stream".into(), json!(true));
     }
-    let include_usage = req
-        .pointer("/stream_options/include_usage")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
+    let include_usage = req.pointer("/stream_options/include_usage").and_then(Value::as_bool).unwrap_or(false);
 
     Ok(Translated { body: Value::Object(out), stream, include_usage })
 }
@@ -285,10 +275,7 @@ pub fn map_stop_reason(reason: Option<&str>) -> &'static str {
 }
 
 pub fn now_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0)
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
 }
 
 pub fn completion_id(anthropic_id: Option<&str>) -> String {

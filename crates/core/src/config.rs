@@ -258,8 +258,7 @@ impl Config {
 /// Der API-Schlüssel geht an diese URL – daher nur `https`, `http` allein für lokale Upstreams
 /// (z. B. ein LiteLLM auf demselben Rechner).
 fn check_base_url(id: &str, base_url: &str) -> Result<(), String> {
-    let url = reqwest::Url::parse(base_url.trim())
-        .map_err(|e| format!("Basis-URL von '{id}' ist ungültig: {e}"))?;
+    let url = reqwest::Url::parse(base_url.trim()).map_err(|e| format!("Basis-URL von '{id}' ist ungültig: {e}"))?;
     let local = match url.host() {
         Some(url::Host::Domain(d)) => d.eq_ignore_ascii_case("localhost"),
         Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
@@ -292,7 +291,8 @@ pub(crate) fn make_private(path: &Path) -> Result<(), String> {
 #[cfg(unix)]
 fn set_mode(path: &Path, mode: u32) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)).map_err(|e| format!("{}: {e}", path.display()))
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
+        .map_err(|e| format!("{}: {e}", path.display()))
 }
 
 #[cfg(not(unix))]
@@ -314,9 +314,7 @@ pub fn default_config_path() -> PathBuf {
     if let Ok(p) = std::env::var("LLM_BRIDGE_CONFIG") {
         return PathBuf::from(p);
     }
-    project_dirs()
-        .map(|d| d.config_dir().join("config.toml"))
-        .unwrap_or_else(|| PathBuf::from("llm-bridge.toml"))
+    project_dirs().map(|d| d.config_dir().join("config.toml")).unwrap_or_else(|| PathBuf::from("llm-bridge.toml"))
 }
 
 /// Pfad der Statistik-Datenbank. Überschreibbar mit `LLM_BRIDGE_DB`.
@@ -384,7 +382,9 @@ mod tests {
         ] {
             assert!(check_base_url("x", ok).is_ok(), "{ok}");
         }
-        for bad in ["http://api.anthropic.com", "http://localhost.evil.example", "ftp://localhost", "api.anthropic.com", ""] {
+        for bad in
+            ["http://api.anthropic.com", "http://localhost.evil.example", "ftp://localhost", "api.anthropic.com", ""]
+        {
             assert!(check_base_url("x", bad).is_err(), "{bad}");
         }
     }

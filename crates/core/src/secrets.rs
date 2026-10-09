@@ -8,10 +8,8 @@ const SERVICE: &str = "ai.it-guy.llmbridge";
 
 /// Standard-Umgebungsvariable für einen Upstream, z. B. `LLM_BRIDGE_KEY_LANGDOCK_EU`.
 pub fn env_var_name(upstream_id: &str) -> String {
-    let id: String = upstream_id
-        .chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_uppercase() } else { '_' })
-        .collect();
+    let id: String =
+        upstream_id.chars().map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_uppercase() } else { '_' }).collect();
     format!("LLM_BRIDGE_KEY_{id}")
 }
 
@@ -26,10 +24,7 @@ pub enum KeySource {
 
 fn from_env(up: &Upstream) -> Option<String> {
     let candidates = [up.api_key_env.trim().to_string(), env_var_name(&up.id)];
-    candidates
-        .iter()
-        .filter(|n| !n.is_empty())
-        .find_map(|n| std::env::var(n).ok().filter(|v| !v.trim().is_empty()))
+    candidates.iter().filter(|n| !n.is_empty()).find_map(|n| std::env::var(n).ok().filter(|v| !v.trim().is_empty()))
 }
 
 fn entry(upstream_id: &str) -> Result<keyring::Entry, String> {

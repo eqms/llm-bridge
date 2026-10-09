@@ -107,10 +107,7 @@ pub struct Report {
 }
 
 pub fn now_ms() -> i64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_millis() as i64)
-        .unwrap_or(0)
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
 }
 
 #[derive(Clone)]
@@ -187,10 +184,19 @@ impl Stats {
                     cache_read_tokens, cache_write_tokens, duration_ms, status, stream, error)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
                 params![
-                    r.ts, r.client, r.alias, r.upstream, r.model,
-                    r.input_tokens as i64, r.output_tokens as i64,
-                    r.cache_read_tokens as i64, r.cache_write_tokens as i64,
-                    r.duration_ms as i64, r.status as i64, r.stream as i64, r.error
+                    r.ts,
+                    r.client,
+                    r.alias,
+                    r.upstream,
+                    r.model,
+                    r.input_tokens as i64,
+                    r.output_tokens as i64,
+                    r.cache_read_tokens as i64,
+                    r.cache_write_tokens as i64,
+                    r.duration_ms as i64,
+                    r.status as i64,
+                    r.stream as i64,
+                    r.error
                 ],
             )
             .map(|_| conn.last_insert_rowid())
@@ -282,9 +288,15 @@ impl Stats {
                 "%Y-%m-%d %H:00",
                 "strftime('%Y-%m-%d %H:00', 'now', 'localtime')",
             ),
-            Range::Week => ("date('now', 'localtime', '-6 days')".into(), "+1 day", "%Y-%m-%d", "date('now', 'localtime')"),
-            Range::Month => ("date('now', 'localtime', '-29 days')".into(), "+1 day", "%Y-%m-%d", "date('now', 'localtime')"),
-            Range::Quarter => ("date('now', 'localtime', '-89 days')".into(), "+1 day", "%Y-%m-%d", "date('now', 'localtime')"),
+            Range::Week => {
+                ("date('now', 'localtime', '-6 days')".into(), "+1 day", "%Y-%m-%d", "date('now', 'localtime')")
+            }
+            Range::Month => {
+                ("date('now', 'localtime', '-29 days')".into(), "+1 day", "%Y-%m-%d", "date('now', 'localtime')")
+            }
+            Range::Quarter => {
+                ("date('now', 'localtime', '-89 days')".into(), "+1 day", "%Y-%m-%d", "date('now', 'localtime')")
+            }
             Range::All => {
                 let first: Option<i64> =
                     self.with(|c| c.query_row("SELECT MIN(ts) FROM requests", [], |r| r.get(0)).optional())?.flatten();
@@ -388,9 +400,20 @@ impl Stats {
         for r in &rows {
             out.push_str(&format!(
                 "{};{};{};{};{};{};{};{};{};{};{};{};{};{}\n",
-                r.id, r.ts, esc(&r.client), esc(&r.alias), esc(&r.upstream), esc(&r.model),
-                r.input_tokens, r.output_tokens, r.cache_read_tokens, r.cache_write_tokens,
-                r.duration_ms, r.status, r.stream as u8, esc(r.error.as_deref().unwrap_or(""))
+                r.id,
+                r.ts,
+                esc(&r.client),
+                esc(&r.alias),
+                esc(&r.upstream),
+                esc(&r.model),
+                r.input_tokens,
+                r.output_tokens,
+                r.cache_read_tokens,
+                r.cache_write_tokens,
+                r.duration_ms,
+                r.status,
+                r.stream as u8,
+                esc(r.error.as_deref().unwrap_or(""))
             ));
         }
         std::fs::write(path, out).map_err(|e| e.to_string())?;
