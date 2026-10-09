@@ -26,14 +26,9 @@ rusqlite = { version = "0.40", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
 url = "2"
 
-[target.'cfg(target_os = "macos")'.dependencies]
-keyring = { version = "3", features = ["apple-native"] }
-
-[target.'cfg(target_os = "windows")'.dependencies]
-keyring = { version = "3", features = ["windows-native"] }
-
-[target.'cfg(target_os = "linux")'.dependencies]
-keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"] }
+# Feature `v1` wählt den Speicher je Plattform: macOS Keychain, Windows Anmeldeinformationsverwaltung,
+# Linux Secret Service (zbus, ohne libdbus)
+keyring = "4"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }

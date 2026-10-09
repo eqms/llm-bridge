@@ -77,6 +77,20 @@ pub fn delete_api_key(upstream_id: &str) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    /// Schreibt in den echten Schlüsselbund – nur manuell: `cargo test -p llm-bridge-core -- --ignored`
+    #[test]
+    #[ignore]
+    fn keyring_roundtrip() {
+        let id = "llm-bridge-selftest";
+        let up = Upstream { id: id.into(), ..Upstream::default() };
+        set_api_key(id, "test-wert").unwrap();
+        assert_eq!(get_api_key(&up).unwrap().as_deref(), Some("test-wert"));
+        assert_eq!(key_source(&up), KeySource::Keyring);
+        delete_api_key(id).unwrap();
+        assert_eq!(get_api_key(&up).unwrap(), None);
+        delete_api_key(id).unwrap(); // zweimal löschen ist kein Fehler
+    }
+
     #[test]
     fn env_names() {
         assert_eq!(env_var_name("langdock-eu"), "LLM_BRIDGE_KEY_LANGDOCK_EU");
