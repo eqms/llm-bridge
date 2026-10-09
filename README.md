@@ -132,8 +132,11 @@ Die Sprache erscheint danach automatisch in den Einstellungen.
 ## Tests
 
 ```bash
+cargo fmt --check                                  # rustfmt.toml: max_width 120
+cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
-cargo clippy --workspace --all-targets
+cargo test -p llm-bridge-core -- --ignored         # schreibt in den echten Schlüsselbund
+cargo deny check                                   # Advisories, Lizenzen, Quellen (deny.toml)
 ```
 
 ## Lizenz

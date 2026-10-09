@@ -5,6 +5,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
+publish.workspace = true
 
 [dependencies]
 tokio.workspace = true
@@ -33,3 +34,6 @@ keyring = "4"
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }
 tempfile = "3"
+
+[lints]
+workspace = true

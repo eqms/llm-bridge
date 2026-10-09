@@ -9,6 +9,7 @@ license = "MIT"
 authors = ["Martin Schmid"]
 repository = "https://github.com/eqms/llm-bridge"
 rust-version = "1.90"
+publish = false
 
 [workspace.dependencies]
 llm-bridge-core = { path = "crates/core" }
@@ -17,6 +18,14 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
 
 [profile.release]
 lto = true

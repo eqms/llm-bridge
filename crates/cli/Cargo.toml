@@ -5,6 +5,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
+publish.workspace = true
 
 [[bin]]
 name = "llm-bridge"
@@ -18,3 +19,6 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 clap = { version = "4", features = ["derive", "env"] }
 rpassword = "7"
+
+[lints]
+workspace = true
