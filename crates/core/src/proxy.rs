@@ -35,6 +35,8 @@ pub struct TestResult {
 
 impl ProxyState {
     pub fn new(config: Config, stats: Stats) -> Arc<Self> {
+        // reqwest ist ohne eigenen Krypto-Provider gebaut; schon installiert ist kein Fehler.
+        let _ = rustls::crypto::ring::default_provider().install_default();
         let client = reqwest::Client::builder()
             .connect_timeout(Duration::from_secs(15))
             .read_timeout(Duration::from_secs(180))
