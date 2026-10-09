@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LLM Bridge</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="logo.png" alt="" width="34" height="34">
+        <div>
+          <div class="brand-name">LLM Bridge</div>
+          <div class="brand-sub" id="brand-sub"></div>
+        </div>
+      </div>
+      <nav id="nav"></nav>
+      <div class="sidebar-foot">
+        <button class="status-pill" id="status-pill" type="button"></button>
+        <div class="version" id="version"></div>
+      </div>
+    </aside>
+    <main id="view" tabindex="-1"></main>
+  </div>
+  <div class="savebar" id="savebar" hidden>
+    <span id="savebar-text"></span>
+    <div class="savebar-actions">
+      <button class="btn ghost" id="discard" type="button"></button>
+      <button class="btn primary" id="save" type="button"></button>
+    </div>
+  </div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <!-- Sprachdateien: neue Sprache = neue Datei in locales/ + Eintrag hier -->
+  <script src="locales/de.js"></script>
+  <script src="locales/en.js"></script>
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

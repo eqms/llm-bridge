@@ -1,0 +1,45 @@
+# LLM Bridge – Beispielkonfiguration
+# API-Schlüssel gehören NICHT hierher: GUI, `llm-bridge set-key <id>` oder LLM_BRIDGE_KEY_<ID>.
+
+[server]
+host = "127.0.0.1"   # nur lokal erreichbar
+port = 4000
+access_token = ""    # wird beim ersten Start zufällig erzeugt; Clients senden es als API-Schlüssel. Leer = jedes lokale Programm darf
+
+[defaults]
+max_tokens = 4096            # gilt, wenn der Client kein max_tokens schickt
+request_timeout_secs = 300   # für nicht gestreamte Anfragen
+
+[ui]
+language = "auto"        # auto, de, en
+start_minimized = false
+autostart_proxy = true
+
+[[upstreams]]
+id = "langdock-eu"
+name = "LangDock EU"
+base_url = "https://api.langdock.com/anthropic/eu"
+auth = "bearer"                 # bearer | x-api-key
+anthropic_version = "2023-06-01"
+api_key_env = ""                # optional eigener Variablenname
+
+[[upstreams]]
+id = "anthropic"
+name = "Anthropic"
+base_url = "https://api.anthropic.com"
+auth = "x-api-key"
+anthropic_version = "2023-06-01"
+api_key_env = "ANTHROPIC_API_KEY"
+
+# Alias → Upstream + Modell-ID. Die tatsächlichen IDs liefert „Modelle abrufen“
+# bzw. `llm-bridge models langdock-eu`.
+[[models]]
+alias = "haiku"
+upstream = "langdock-eu"
+model = "claude-haiku-5-5-default"
+
+[[models]]
+alias = "sonnet"
+upstream = "langdock-eu"
+model = "claude-sonnet-4-6-default"
+max_tokens = 8192

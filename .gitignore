@@ -1,0 +1,5 @@
+/target
+/app/src-tauri/gen/schemas
+*.sqlite
+*.sqlite-*
+.DS_Store

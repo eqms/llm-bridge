@@ -1,0 +1,20 @@
+[package]
+name = "llm-bridge-cli"
+description = "LLM Bridge ohne GUI – für Server, systemd und Skripte"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "llm-bridge"
+path = "src/main.rs"
+
+[dependencies]
+llm-bridge-core.workspace = true
+tokio.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+clap = { version = "4", features = ["derive", "env"] }
+rpassword = "7"
