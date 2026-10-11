@@ -139,6 +139,25 @@ cargo test -p llm-bridge-core -- --ignored         # schreibt in den echten Schl
 cargo deny check                                   # Advisories, Lizenzen, Quellen (deny.toml)
 ```
 
+## Release
+
+Ein Tag `v<Version>` (passend zu `version` in `Cargo.toml`) startet `.github/workflows/release.yml`:
+Prüfungen, Build für macOS (Apple Silicon und Intel), Windows und Linux, danach ein **Release-Entwurf**
+mit allen Paketen und `SHA256SUMS`. Veröffentlicht wird der Entwurf von Hand.
+
+- **macOS**: App, DMG und CLI sind mit einer Developer ID signiert und von Apple notarisiert.
+- **Windows und Linux**: unsigniert; die Prüfsummen stehen in `SHA256SUMS`.
+
+Benötigte Repository-Secrets für die macOS-Signatur:
+
+| Secret | Inhalt |
+|---|---|
+| `APPLE_CERTIFICATE` | Developer-ID-Application-Zertifikat als `.p12`, Base64-kodiert |
+| `APPLE_CERTIFICATE_PASSWORD` | Passwort der `.p12`-Datei |
+| `APPLE_API_KEY` | Key-ID des App-Store-Connect-API-Schlüssels (Notarisierung) |
+| `APPLE_API_ISSUER` | Issuer-ID aus App Store Connect |
+| `APPLE_API_KEY_P8` | Inhalt der Datei `AuthKey_<Key-ID>.p8` |
+
 ## Lizenz
 
 MIT © Martin Schmid
