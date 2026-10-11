@@ -1,5 +1,6 @@
 //! Weiterleitung an den Anthropic-kompatiblen Upstream inkl. SSE-Übersetzung.
 
+use crate::activity::Activity;
 use crate::config::{AuthMode, Config, Upstream};
 use crate::error::{upstream_message, ProxyError};
 use crate::secrets;
@@ -22,6 +23,7 @@ pub struct ProxyState {
     config: RwLock<Config>,
     client: reqwest::Client,
     pub stats: Stats,
+    pub activity: Arc<Activity>,
     keys: Mutex<HashMap<String, String>>,
 }
 
@@ -45,7 +47,13 @@ impl ProxyState {
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .expect("HTTP-Client");
-        Arc::new(Self { config: RwLock::new(config), client, stats, keys: Mutex::new(HashMap::new()) })
+        Arc::new(Self {
+            config: RwLock::new(config),
+            client,
+            stats,
+            activity: Arc::default(),
+            keys: Mutex::new(HashMap::new()),
+        })
     }
 
     pub fn config(&self) -> Config {

@@ -6,6 +6,7 @@
 //! weiter und übersetzt die Antwort – inklusive Streaming – zurück.
 //! Jede Anfrage wird mit ihrem Token-Verbrauch in einer lokalen SQLite-Datenbank erfasst.
 
+pub mod activity;
 pub mod config;
 pub mod error;
 pub mod proxy;
@@ -13,6 +14,7 @@ pub mod secrets;
 pub mod server;
 pub mod stats;
 pub mod translate;
+pub mod update;
 
 pub use config::{default_config_path, default_db_path, AuthMode, Config, ModelRoute, Upstream};
 pub use proxy::{ProxyState, TestResult};

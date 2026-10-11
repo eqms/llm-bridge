@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use llm_bridge_core::{config, secrets, stats::Range, Config, ProxyState, Stats};
+use llm_bridge_core::{config, secrets, stats::Range, update, Config, ProxyState, Stats};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -59,6 +59,12 @@ enum Cmd {
     Test { model: String },
     /// Pfade und Konfiguration anzeigen
     Info,
+    /// Auf die neueste veröffentlichte Version aktualisieren (Signatur wird geprüft)
+    Update {
+        /// Nur nachsehen, ob es eine neue Version gibt
+        #[arg(long)]
+        check: bool,
+    },
 }
 
 fn fmt_n(n: u64) -> String {
@@ -92,6 +98,10 @@ async fn main() -> ExitCode {
 }
 
 async fn run(cli: Cli) -> Result<(), String> {
+    // Braucht weder Konfiguration noch Statistik – und soll auch keine anlegen.
+    if let Cmd::Update { check } = cli.cmd {
+        return self_update(check).await;
+    }
     let config_path = cli.config.clone().unwrap_or_else(config::default_config_path);
     let db_path = cli.db.clone().unwrap_or_else(config::default_db_path);
     let mut cfg = Config::load_or_init(&config_path)?;
@@ -202,6 +212,7 @@ async fn run(cli: Cli) -> Result<(), String> {
                 return Err("Test fehlgeschlagen".into());
             }
         }
+        Cmd::Update { .. } => unreachable!("oben behandelt"),
         Cmd::Info => {
             println!("Version:     {}", llm_bridge_core::VERSION);
             println!("Konfig:      {}", config_path.display());
@@ -218,5 +229,34 @@ async fn run(cli: Cli) -> Result<(), String> {
             }
         }
     }
+    Ok(())
+}
+
+async fn self_update(check_only: bool) -> Result<(), String> {
+    let current = update::current_version();
+    let latest = update::latest_version().await?;
+    if latest <= current {
+        println!("LLM Bridge {current} ist aktuell.");
+        return Ok(());
+    }
+    println!("Neue Version {latest} verfügbar (installiert: {current}).");
+    if check_only {
+        return Ok(());
+    }
+    let data = update::download_cli(&latest).await?;
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    // Neben der alten Datei ablegen: gleiches Dateisystem, und fehlende Schreibrechte fallen sofort auf.
+    let staged = exe.with_file_name(format!(".llm-bridge-update-{}", std::process::id()));
+    std::fs::write(&staged, &data)
+        .map_err(|e| format!("{}: {e} (Schreibrechte für das Verzeichnis nötig)", staged.display()))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o755)).map_err(|e| e.to_string())?;
+    }
+    let replaced = self_replace::self_replace(&staged).map_err(|e| format!("{}: {e}", exe.display()));
+    let _ = std::fs::remove_file(&staged);
+    replaced?;
+    println!("Aktualisiert auf {latest}. Ein laufendes `llm-bridge serve` muss neu gestartet werden.");
     Ok(())
 }

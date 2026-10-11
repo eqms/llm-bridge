@@ -1,7 +1,12 @@
 name: Release
 
 # A tag `v<version>` builds all platforms and creates a draft release.
-# A manual run builds (and signs) everything but publishes nothing.
+# A manual run builds (and signs) everything but publishes nothing; the assembled
+# update manifest is kept as a workflow artifact for inspection.
+#
+# Update channel: `latest.json` (Tauri updater manifest) plus minisign signatures for
+# every updater artifact and for the bare CLI binaries (`llm-bridge update`). Installed
+# apps only see a release once the draft is published.
 on:
   push:
     tags: ["v*"]
@@ -41,12 +46,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Tag matches the crate version
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Version (and tag check)
         shell: bash
         run: |
           version=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          if [[ "$GITHUB_REF" == refs/tags/* && "v$version" != "$GITHUB_REF_NAME" ]]; then
             echo "::error::Tag $GITHUB_REF_NAME does not match version $version in Cargo.toml"
             exit 1
           fi
@@ -102,11 +107,24 @@ jobs:
             echo "SIGNING_KEYCHAIN=$keychain"
           } >> "$GITHUB_ENV"
 
+      # Updater signing key (minisign). `tauri build` signs the updater artifacts with it;
+      # the package steps sign the bare CLI binaries.
+      - name: Updater key present
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] || { echo "::error::Secret TAURI_SIGNING_PRIVATE_KEY is missing"; exit 1; }
+          [ -n "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" ] || { echo "::error::Secret TAURI_SIGNING_PRIVATE_KEY_PASSWORD is missing"; exit 1; }
+
       - name: Build app
         working-directory: app/src-tauri
         env:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: cargo tauri build --target ${{ matrix.target }}
 
       - name: Build CLI
@@ -117,6 +135,8 @@ jobs:
         env:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           mkdir dist
           auth=(--key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER")
@@ -143,6 +163,14 @@ jobs:
           codesign --force --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY" "$bin"
           ditto -c -k "$bin" "dist/llm-bridge-cli-$TARGET.zip"
           notarize "dist/llm-bridge-cli-$TARGET.zip"
+          # Same signed binary, unpacked, for `llm-bridge update`
+          cp "$bin" "dist/llm-bridge-$TARGET"
+          cargo tauri signer sign --app-version "$VERSION" "dist/llm-bridge-$TARGET"
+          # Updater bundle of the notarized app; the name carries the target so both
+          # macOS architectures can sit in one release.
+          upd="target/$TARGET/release/bundle/macos/LLM Bridge.app.tar.gz"
+          cp "$upd" "dist/LLM-Bridge_${VERSION}_$TARGET.app.tar.gz"
+          cp "$upd.sig" "dist/LLM-Bridge_${VERSION}_$TARGET.app.tar.gz.sig"
           for dmg in "target/$TARGET/release/bundle/dmg/"*.dmg; do
             out="dist/$(basename "$dmg")"
             cp "$dmg" "$out"
@@ -154,18 +182,28 @@ jobs:
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           mkdir dist
           7z a -tzip "dist/llm-bridge-cli-$TARGET.zip" "./target/$TARGET/release/llm-bridge.exe"
-          cp "target/$TARGET/release/bundle/msi/"*.msi "target/$TARGET/release/bundle/nsis/"*.exe dist/
+          cp "target/$TARGET/release/llm-bridge.exe" "dist/llm-bridge-$TARGET.exe"
+          cargo tauri signer sign --app-version "$VERSION" "dist/llm-bridge-$TARGET.exe"
+          cp "target/$TARGET/release/bundle/msi/"*.msi* "target/$TARGET/release/bundle/nsis/"*.exe* dist/
 
       - name: Package (Linux)
         if: runner.os == 'Linux'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           mkdir dist
           tar -czf "dist/llm-bridge-cli-$TARGET.tar.gz" -C "target/$TARGET/release" llm-bridge
-          cp "target/$TARGET/release/bundle/deb/"*.deb "target/$TARGET/release/bundle/rpm/"*.rpm \
-             "target/$TARGET/release/bundle/appimage/"*.AppImage dist/
+          cp "target/$TARGET/release/llm-bridge" "dist/llm-bridge-$TARGET"
+          cargo tauri signer sign --app-version "$VERSION" "dist/llm-bridge-$TARGET"
+          cp "target/$TARGET/release/bundle/deb/"*.deb* "target/$TARGET/release/bundle/rpm/"*.rpm* \
+             "target/$TARGET/release/bundle/appimage/"*.AppImage* dist/
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -181,20 +219,73 @@ jobs:
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: Cargo.toml
+          sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: dist-*
           merge-multiple: true
           path: dist
+
+      # GitHub turns spaces in asset names into dots; rename first so the URLs in
+      # latest.json match the uploaded files.
+      - name: Update manifest
+        working-directory: dist
+        run: |
+          shopt -s nullglob
+          for f in *\ *; do mv -- "$f" "${f// /-}"; done
+          version=$(grep -m1 '^version = ' ../Cargo.toml | cut -d'"' -f2)
+          base="https://github.com/$GITHUB_REPOSITORY/releases/download/v$version"
+          platforms='{}'
+          # add <required|optional> <file pattern> <manifest key>...
+          add() {
+            local need=$1 pattern=$2; shift 2
+            # shellcheck disable=SC2206 # the pattern is meant to glob
+            local files=($pattern)
+            if [ ${#files[@]} -ne 1 ] || [ ! -f "${files[0]}.sig" ]; then
+              [ "$need" = optional ] && return 0
+              echo "::error::Expected exactly one signed updater artifact for $pattern, found: ${files[*]:-none}"
+              exit 1
+            fi
+            for key in "$@"; do
+              platforms=$(jq --arg k "$key" --arg url "$base/${files[0]}" --rawfile sig "${files[0]}.sig" \
+                '. + {($k): {url: $url, signature: ($sig | rtrimstr("\n"))}}' <<< "$platforms")
+            done
+          }
+          add required "*_aarch64-apple-darwin.app.tar.gz" darwin-aarch64-app darwin-aarch64
+          add required "*_x86_64-apple-darwin.app.tar.gz" darwin-x86_64-app darwin-x86_64
+          add required "*-setup.exe" windows-x86_64-nsis windows-x86_64
+          add optional "*.msi" windows-x86_64-msi
+          add required "*.AppImage" linux-x86_64-appimage linux-x86_64
+          add optional "*.deb" linux-x86_64-deb
+          add optional "*.rpm" linux-x86_64-rpm
+          for t in aarch64-apple-darwin x86_64-apple-darwin x86_64-unknown-linux-gnu x86_64-pc-windows-msvc; do
+            ls llm-bridge-"$t"* > /dev/null || { echo "::error::CLI binary for $t missing"; exit 1; }
+          done
+          jq -n --arg v "$version" --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson p "$platforms" \
+            '{version: $v, notes: "See the release notes on GitHub.", pub_date: $date, platforms: $p}' > latest.json
+          cat latest.json
       - name: Checksums
         working-directory: dist
         run: sha256sum -- * > SHA256SUMS && cat SHA256SUMS
+
+      - name: Keep manifest (manual run)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-manifest
+          path: |
+            dist/latest.json
+            dist/SHA256SUMS
       - name: Draft release
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

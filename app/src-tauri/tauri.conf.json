@@ -46,6 +46,19 @@
       "deb": {
         "depends": ["libayatana-appindicator3-1"]
       }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU4RTFFNDg0RTRBMjc5NkIKUldScmVhTGtoT1RoNkVYemJCUTVud1dhQ1ViMWp3bGVTVE4rYUJlTk8vRFYwSmxpVU12QTkyU3AK",
+      "endpoints": [
+        "https://github.com/eqms/llm-bridge/releases/latest/download/latest.json"
+      ],
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

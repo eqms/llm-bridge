@@ -40,6 +40,8 @@ pub struct UiConfig {
     pub start_minimized: bool,
     /// Proxy beim Start der App automatisch starten.
     pub autostart_proxy: bool,
+    /// Neue Versionen automatisch installieren, sobald der Proxy untätig ist.
+    pub auto_update: bool,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -93,7 +95,7 @@ impl Default for Defaults {
 
 impl Default for UiConfig {
     fn default() -> Self {
-        Self { language: "auto".into(), start_minimized: false, autostart_proxy: true }
+        Self { language: "auto".into(), start_minimized: false, autostart_proxy: true, auto_update: true }
     }
 }
 

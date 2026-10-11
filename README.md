@@ -104,6 +104,7 @@ llm-bridge stats --range 30d        # Statistik (24h, 7d, 30d, 90d, all; --json)
 llm-bridge export stats.csv         # CSV-Export
 llm-bridge reset-stats [--yes]      # Statistik löschen
 llm-bridge info                     # Pfade, Upstreams, Schlüsselquelle
+llm-bridge update [--check]         # auf die neueste Version aktualisieren
 ```
 
 Beispiel für einen Linux-Server mit systemd:
@@ -114,6 +115,20 @@ Environment=LLM_BRIDGE_KEY_LANGDOCK_EU=sk-…
 ExecStart=/usr/local/bin/llm-bridge serve
 Restart=on-failure
 ```
+
+### Updates
+
+Die App sucht kurz nach dem Start und danach alle sechs Stunden nach einer neuen Version. Ein Update
+wird im Hintergrund geladen und erst installiert, wenn der Proxy fünf Minuten lang keine
+Chat-Anfrage bearbeitet hat. Bis dahin zeigt das Tray-Menü das wartende Update an. Danach startet
+die App neu, und der Proxy läuft wieder. Abschalten lässt sich das unter *Einstellungen →
+Automatisch aktualisieren*.
+
+Die CLI aktualisiert sich mit `llm-bridge update`. Ein laufendes `llm-bridge serve` muss danach
+neu gestartet werden, unter systemd etwa mit `systemctl restart`.
+
+Jedes Update ist mit einem eigenen Schlüssel signiert (minisign). App und CLI installieren nur,
+wenn die Signatur passt und für genau die angekündigte Version erstellt wurde.
 
 ### Statistik
 
@@ -153,12 +168,13 @@ cargo deny check                                   # Advisories, Lizenzen, Quell
 
 Ein Tag `v<Version>` (passend zu `version` in `Cargo.toml`) startet `.github/workflows/release.yml`:
 Prüfungen, Build für macOS (Apple Silicon und Intel), Windows und Linux, danach ein **Release-Entwurf**
-mit allen Paketen und `SHA256SUMS`. Veröffentlicht wird der Entwurf von Hand.
+mit allen Paketen, `SHA256SUMS` und dem Update-Manifest `latest.json`. Veröffentlicht wird der
+Entwurf von Hand; erst dann sehen installierte Apps und `llm-bridge update` die neue Version.
 
 - **macOS**: App, DMG und CLI sind mit einer Developer ID signiert und von Apple notarisiert.
 - **Windows und Linux**: unsigniert; die Prüfsummen stehen in `SHA256SUMS`.
 
-Benötigte Repository-Secrets für die macOS-Signatur:
+Benötigte Repository-Secrets:
 
 | Secret | Inhalt |
 |---|---|
@@ -167,6 +183,12 @@ Benötigte Repository-Secrets für die macOS-Signatur:
 | `APPLE_API_KEY` | Key-ID des App-Store-Connect-API-Schlüssels (Notarisierung) |
 | `APPLE_API_ISSUER` | Issuer-ID aus App Store Connect |
 | `APPLE_API_KEY_P8` | Inhalt der Datei `AuthKey_<Key-ID>.p8` |
+| `TAURI_SIGNING_PRIVATE_KEY` | Privater Update-Schlüssel (Inhalt der Datei aus `cargo tauri signer generate`) |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Passwort dieses Schlüssels |
+
+Der öffentliche Update-Schlüssel steht in `app/src-tauri/tauri.conf.json` und
+`crates/core/src/update.rs`; ein Test prüft, dass beide übereinstimmen. Geht der private
+Schlüssel verloren, können bestehende Installationen keine Updates mehr annehmen.
 
 ### Lizenz
 
@@ -274,6 +296,7 @@ llm-bridge stats --range 30d        # statistics (24h, 7d, 30d, 90d, all; --json
 llm-bridge export stats.csv         # CSV export
 llm-bridge reset-stats [--yes]      # delete statistics
 llm-bridge info                     # paths, upstreams, key source
+llm-bridge update [--check]         # update to the latest release
 ```
 
 Example for a Linux server with systemd:
@@ -284,6 +307,19 @@ Environment=LLM_BRIDGE_KEY_LANGDOCK_EU=sk-…
 ExecStart=/usr/local/bin/llm-bridge serve
 Restart=on-failure
 ```
+
+### Updates
+
+The app checks for a new version shortly after start and then every six hours. An update is
+downloaded in the background and installed only once the proxy has not handled a chat request for
+five minutes. Until then the tray menu shows the pending update. The app then restarts and the
+proxy is back up. Turn this off under *Settings → Update automatically*.
+
+The CLI updates itself with `llm-bridge update`. A running `llm-bridge serve` must be restarted
+afterwards, for example with `systemctl restart` under systemd.
+
+Every update is signed with a dedicated key (minisign). App and CLI only install it if the
+signature is valid and was made for exactly the announced version.
 
 ### Statistics
 
@@ -323,12 +359,13 @@ cargo deny check                                   # advisories, licenses, sourc
 
 A tag `v<version>` (matching `version` in `Cargo.toml`) triggers `.github/workflows/release.yml`:
 checks, builds for macOS (Apple Silicon and Intel), Windows and Linux, then a **draft release**
-with all packages and `SHA256SUMS`. The draft is published manually.
+with all packages, `SHA256SUMS` and the update manifest `latest.json`. The draft is published
+manually; only then do installed apps and `llm-bridge update` see the new version.
 
 - **macOS**: app, DMG and CLI are signed with a Developer ID and notarized by Apple.
 - **Windows and Linux**: unsigned; checksums are listed in `SHA256SUMS`.
 
-Repository secrets required for macOS signing:
+Required repository secrets:
 
 | Secret | Contents |
 |---|---|
@@ -337,6 +374,12 @@ Repository secrets required for macOS signing:
 | `APPLE_API_KEY` | Key ID of the App Store Connect API key (notarization) |
 | `APPLE_API_ISSUER` | Issuer ID from App Store Connect |
 | `APPLE_API_KEY_P8` | Contents of the file `AuthKey_<Key-ID>.p8` |
+| `TAURI_SIGNING_PRIVATE_KEY` | Private update key (contents of the file from `cargo tauri signer generate`) |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password of that key |
+
+The public update key lives in `app/src-tauri/tauri.conf.json` and `crates/core/src/update.rs`;
+a test checks that both match. If the private key is lost, existing installations can no longer
+accept updates.
 
 ### License
 

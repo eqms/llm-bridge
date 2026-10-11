@@ -132,6 +132,8 @@
   "settings.autostart_proxy_hint": "Ohne diese Option muss der Proxy manuell gestartet werden.",
   "settings.start_minimized": "Nur im Tray starten",
   "settings.start_minimized_hint": "Das Fenster öffnet sich erst beim Klick auf das Tray-Symbol.",
+  "settings.auto_update": "Automatisch aktualisieren",
+  "settings.auto_update_hint": "Neue Versionen werden signiert geladen und installiert, sobald einige Minuten keine Anfrage lief. Die App startet dabei kurz neu.",
   "settings.login_item": "Bei Anmeldung starten",
   "settings.login_item_hint": "Startet LLM Bridge automatisch mit dem Betriebssystem (minimiert). Wird sofort übernommen.",
   "settings.server": "Lokaler Server",

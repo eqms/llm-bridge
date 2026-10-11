@@ -17,6 +17,7 @@ struct Texts {
     stop: &'static str,
     quit: &'static str,
     tokens_24h: &'static str,
+    update_pending: &'static str,
 }
 
 fn texts(lang: &str) -> Texts {
@@ -29,6 +30,7 @@ fn texts(lang: &str) -> Texts {
             stop: "Proxy stoppen",
             quit: "Beenden",
             tokens_24h: "Tokens (24 h)",
+            update_pending: "Update {v} – wird installiert, sobald untätig",
         },
         _ => Texts {
             running: "● Running",
@@ -38,6 +40,7 @@ fn texts(lang: &str) -> Texts {
             stop: "Stop proxy",
             quit: "Quit",
             tokens_24h: "Tokens (24 h)",
+            update_pending: "Update {v} – installs when idle",
         },
     }
 }
@@ -48,7 +51,7 @@ fn build_menu(app: &AppHandle, status: &Status) -> tauri::Result<Menu<tauri::Wry
         Some(a) if status.running => format!("{} – {a}", t.running),
         _ => t.stopped.to_string(),
     };
-    Menu::with_items(
+    let menu = Menu::with_items(
         app,
         &[
             &MenuItem::with_id(app, "status", state_line, false, None::<&str>)?,
@@ -58,7 +61,12 @@ fn build_menu(app: &AppHandle, status: &Status) -> tauri::Result<Menu<tauri::Wry
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "quit", t.quit, true, None::<&str>)?,
         ],
-    )
+    )?;
+    if let Some(v) = &status.pending_update {
+        let text = t.update_pending.replace("{v}", v);
+        menu.insert(&MenuItem::with_id(app, "update", text, false, None::<&str>)?, 1)?;
+    }
+    Ok(menu)
 }
 
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
@@ -72,6 +80,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
         config_path: String::new(),
         db_path: String::new(),
         language: resolve_language(&app.state::<AppState>().proxy.config().ui.language),
+        pending_update: None,
     };
     TrayIconBuilder::with_id(TRAY_ID)
         .icon(icon)

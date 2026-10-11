@@ -430,6 +430,7 @@ function viewSettings() {
       <div style="margin-top:8px">
         ${check("ui.autostart_proxy", t("settings.autostart_proxy"), t("settings.autostart_proxy_hint"), cfg.ui.autostart_proxy)}
         ${check("ui.start_minimized", t("settings.start_minimized"), t("settings.start_minimized_hint"), cfg.ui.start_minimized)}
+        ${check("ui.auto_update", t("settings.auto_update"), t("settings.auto_update_hint"), cfg.ui.auto_update)}
         <label class="check"><input type="checkbox" data-action="autostart" ${S.autostart ? "checked" : ""}><span>${esc(t("settings.login_item"))}<small>${esc(t("settings.login_item_hint"))}</small></span></label>
       </div>
     </div>
@@ -730,7 +731,7 @@ function mockInvoke(cmd, args = {}) {
       config: {
         server: { host: "127.0.0.1", port: 4000, access_token: "" },
         defaults: { max_tokens: 4096, request_timeout_secs: 300 },
-        ui: { language: "auto", start_minimized: false, autostart_proxy: true },
+        ui: { language: "auto", start_minimized: false, autostart_proxy: true, auto_update: true },
         upstreams: [{ id: "langdock-eu", name: "LangDock EU", base_url: "https://api.langdock.com/anthropic/eu", auth: "bearer", anthropic_version: "2023-06-01", api_key_env: "" }],
         models: [
           { alias: "haiku", upstream: "langdock-eu", model: "claude-haiku-5-5-default" },

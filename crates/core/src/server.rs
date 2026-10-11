@@ -1,5 +1,6 @@
 //! Lokaler HTTP-Server (OpenAI-kompatibel).
 
+use crate::activity::TrackedBody;
 use crate::error::ProxyError;
 use crate::proxy::ProxyState;
 use axum::extract::{DefaultBodyLimit, Request, State};
@@ -36,12 +37,15 @@ impl ProxyHandle {
 
 pub fn router(state: Arc<ProxyState>) -> Router {
     Router::new()
+        .route("/v1/chat/completions", post(chat))
+        .route("/chat/completions", post(chat))
+        // Nur Chat-Anfragen zählen als Aktivität; ein Tool, das `/health` abfragt,
+        // soll ein automatisches Update nicht dauerhaft blockieren.
+        .route_layer(middleware::from_fn_with_state(state.clone(), track_activity))
         .route("/", get(root))
         .route("/health", get(health))
         .route("/v1/models", get(models))
         .route("/models", get(models))
-        .route("/v1/chat/completions", post(chat))
-        .route("/chat/completions", post(chat))
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024)) // Bilder als Base64
         .layer(middleware::from_fn_with_state(state.clone(), origin_guard))
         .with_state(state)
@@ -75,6 +79,12 @@ async fn origin_guard(State(state): State<Arc<ProxyState>>, req: Request, next: 
         return e.into_response();
     }
     next.run(req).await
+}
+
+async fn track_activity(State(state): State<Arc<ProxyState>>, req: Request, next: Next) -> Response {
+    let guard = state.activity.begin();
+    let (parts, body) = next.run(req).await.into_parts();
+    Response::from_parts(parts, TrackedBody::wrap(body, guard))
 }
 
 /// Ein gesetzter `Origin` muss lokal sein. Lauscht der Proxy nur auf Loopback, muss auch
@@ -245,7 +255,7 @@ mod tests {
         let mut cfg = Config::default();
         cfg.server.port = 0;
         let state = ProxyState::new(cfg, Stats::open(&dir.path().join("s.sqlite")).unwrap());
-        let handle = start(state).await.unwrap();
+        let handle = start(state.clone()).await.unwrap();
         let url = format!("http://{}/v1/chat/completions", handle.addr);
         let body = r#"{"model":"gibt-es-nicht","messages":[]}"#;
         let client = reqwest::Client::new();
@@ -258,6 +268,8 @@ mod tests {
         assert_eq!(status(client.post(&url).body(body)).await, 415);
         // Regulärer Client kommt bis zur Modellauflösung durch.
         assert_eq!(status(json()).await, 404);
+        // Jede Antwort gibt ihren Aktivitäts-Wächter wieder frei.
+        assert_eq!(state.activity.in_flight(), 0);
 
         handle.stop().await;
     }

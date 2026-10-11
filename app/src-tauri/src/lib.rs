@@ -1,6 +1,7 @@
 //! Tauri-Hülle um den Proxy-Kern: Tray-Icon, Fenster, Befehle für die Oberfläche.
 
 mod tray;
+mod updater;
 
 use llm_bridge_core::secrets::{self, KeySource};
 use llm_bridge_core::stats::{Range, Report};
@@ -17,6 +18,8 @@ pub struct AppState {
     proxy: Arc<ProxyState>,
     handle: Mutex<Option<ProxyHandle>>,
     last_error: std::sync::Mutex<Option<String>>,
+    /// Heruntergeladenes Update, das auf eine ruhige Phase wartet.
+    pending_update: std::sync::Mutex<Option<String>>,
     config_path: PathBuf,
     db_path: PathBuf,
 }
@@ -31,6 +34,7 @@ pub struct Status {
     config_path: String,
     db_path: String,
     language: String,
+    pending_update: Option<String>,
 }
 
 /// Sprache für Backend-Texte (Tray). `auto` → Systemsprache.
@@ -59,6 +63,7 @@ impl AppState {
             config_path: self.config_path.display().to_string(),
             db_path: self.db_path.display().to_string(),
             language: resolve_language(&cfg.ui.language),
+            pending_update: self.pending_update.lock().ok().and_then(|p| p.clone()),
         }
     }
 
@@ -94,6 +99,13 @@ impl AppState {
 }
 
 type Cmd<T> = Result<T, String>;
+
+async fn set_pending_update(app: &AppHandle, version: Option<String>) {
+    if let Ok(mut p) = app.state::<AppState>().pending_update.lock() {
+        *p = version;
+    }
+    notify(app).await;
+}
 
 async fn notify(app: &AppHandle) {
     let state = app.state::<AppState>();
@@ -261,10 +273,12 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main_window(app)))
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec!["--minimized"])))
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(AppState {
             proxy: ProxyState::new(cfg.clone(), stats),
             handle: Mutex::new(None),
             last_error: std::sync::Mutex::new(cfg_error),
+            pending_update: std::sync::Mutex::new(None),
             config_path,
             db_path,
         })
@@ -319,6 +333,8 @@ pub fn run() {
                 }
                 notify(&handle).await;
             });
+
+            updater::spawn(app.handle().clone());
 
             if !(cfg.ui.start_minimized || start_minimized_flag) {
                 show_main_window(app.handle());

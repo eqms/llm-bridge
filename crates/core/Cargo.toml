@@ -30,6 +30,10 @@ url = "2"
 # Feature `v1` wählt den Speicher je Plattform: macOS Keychain, Windows Anmeldeinformationsverwaltung,
 # Linux Secret Service (zbus, ohne libdbus)
 keyring = "4"
+http-body = "1"
+minisign-verify = "0.3"
+base64 = "0.22"
+semver = "1"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }
