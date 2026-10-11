@@ -28,39 +28,51 @@ MacWhisper ──OpenAI──▶ LLM Bridge (127.0.0.1:4000/v1) ──Anthropic�
 - **Mehrsprachig** (Deutsch, Englisch; automatische Erkennung der Systemsprache)
 - Headless-CLI für Server und Skripte – teilt Konfiguration und Statistik mit der App
 
-### Projektaufbau
+### Installation
 
-| Pfad | Inhalt |
+Fertige Pakete stehen unter [Releases](https://github.com/eqms/llm-bridge/releases/latest):
+
+| System | Datei |
 |---|---|
-| `crates/core` | Proxy-Logik als Library: Konfiguration, Übersetzung, Streaming, Statistik, axum-Server |
-| `crates/cli` | Binary `llm-bridge` ohne GUI |
-| `app/src-tauri` | Tauri-Backend: Tray, Fenster, Befehle für die Oberfläche |
-| `app/ui` | Oberfläche (HTML/CSS/JS ohne Build-Schritt), Sprachdateien in `app/ui/locales/` |
+| macOS mit Apple Silicon | `LLM-Bridge_<Version>_aarch64.dmg` |
+| macOS mit Intel | `LLM-Bridge_<Version>_x64.dmg` |
+| Windows | `LLM-Bridge_<Version>_x64-setup.exe` (alternativ `.msi`) |
+| Linux | `.AppImage`, `.deb` oder `.rpm` |
 
-### Bauen
+**macOS**: DMG öffnen, *LLM Bridge* in den Ordner *Programme* ziehen und starten. Die App ist mit
+einer Developer ID signiert und von Apple notarisiert, sie startet ohne Warnung. Sie erscheint als
+Symbol in der Menüleiste.
 
-Voraussetzungen: Rust ≥ 1.90 und die [Tauri-Systemabhängigkeiten](https://v2.tauri.app/start/prerequisites/). Unter Linux z. B.:
+**Windows**: Den Installer ausführen. Er ist nicht signiert, deshalb meldet Windows „Der Computer
+wurde durch Windows geschützt“. Mit *Weitere Informationen → Trotzdem ausführen* geht es weiter.
+
+**Linux**:
 
 ```bash
-sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev
+sudo apt install ./LLM-Bridge_*_amd64.deb                   # Debian, Ubuntu
+sudo dnf install ./LLM-Bridge-*.x86_64.rpm                  # Fedora, RHEL
+chmod +x LLM-Bridge_*.AppImage && ./LLM-Bridge_*.AppImage   # AppImage (benötigt libfuse2)
 ```
+
+Für das Tray-Symbol braucht der Desktop AppIndicator-Unterstützung. Unter GNOME ohne Ubuntu-Anpassungen
+ist dafür die Erweiterung „AppIndicator and KStatusNotifierItem Support“ nötig.
+
+**Nur die CLI** (z. B. für Server): Die Programmdatei für das eigene System herunterladen, ausführbar
+machen und in den Pfad legen. Verfügbar sind `llm-bridge-aarch64-apple-darwin`,
+`llm-bridge-x86_64-apple-darwin`, `llm-bridge-x86_64-unknown-linux-gnu` und
+`llm-bridge-x86_64-pc-windows-msvc.exe`.
 
 ```bash
-cargo install tauri-cli --version "^2" --locked
-
-# App im Entwicklungsmodus
-cd app/src-tauri && cargo tauri dev
-
-# Installer (.dmg/.app, .msi/.exe, .deb/.AppImage/.rpm) für das aktuelle System
-cd app/src-tauri && cargo tauri build
-
-# Nur die CLI
-cargo build --release -p llm-bridge-cli     # → target/release/llm-bridge
+curl -fLo llm-bridge https://github.com/eqms/llm-bridge/releases/latest/download/llm-bridge-x86_64-unknown-linux-gnu
+chmod +x llm-bridge && sudo mv llm-bridge /usr/local/bin/
+llm-bridge --version
 ```
 
-Installer für alle drei Plattformen baut der GitHub-Workflow `.github/workflows/release.yml` (bei einem Tag `v*` oder manuell).
+**Prüfsummen**: Jedes Release enthält `SHA256SUMS`. Im Download-Ordner prüfen mit
+`shasum -a 256 -c --ignore-missing SHA256SUMS` (macOS) bzw. `sha256sum -c --ignore-missing SHA256SUMS` (Linux).
 
-Die Oberfläche lässt sich ohne Tauri im Browser ansehen (`app/ui/index.html` öffnen) – sie läuft dann mit Demo-Daten.
+Danach aktualisieren sich App und CLI selbst, siehe [Updates](#updates). Liegt die CLI in einem
+Systemverzeichnis wie `/usr/local/bin`, braucht `llm-bridge update` dort Schreibrechte (`sudo`).
 
 ### Einrichtung
 
@@ -154,6 +166,40 @@ Die Sprache erscheint danach automatisch in den Einstellungen.
 - Upstreams müssen `https://` verwenden; `http://` ist nur für `localhost` erlaubt. Weiterleitungen des Upstreams werden nicht verfolgt, damit der API-Schlüssel nicht an ein fremdes Ziel geht – stattdessen meldet der Proxy die neue Adresse.
 - Konfiguration und Statistik-Datenbank sind nur für den eigenen Benutzer lesbar (0600, Verzeichnis 0700).
 
+### Projektaufbau
+
+| Pfad | Inhalt |
+|---|---|
+| `crates/core` | Proxy-Logik als Library: Konfiguration, Übersetzung, Streaming, Statistik, axum-Server |
+| `crates/cli` | Binary `llm-bridge` ohne GUI |
+| `app/src-tauri` | Tauri-Backend: Tray, Fenster, Befehle für die Oberfläche |
+| `app/ui` | Oberfläche (HTML/CSS/JS ohne Build-Schritt), Sprachdateien in `app/ui/locales/` |
+
+### Aus dem Quellcode bauen
+
+Voraussetzungen: Rust ≥ 1.90 und die [Tauri-Systemabhängigkeiten](https://v2.tauri.app/start/prerequisites/). Unter Linux z. B.:
+
+```bash
+sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev
+```
+
+```bash
+cargo install tauri-cli --version "^2" --locked
+
+# App im Entwicklungsmodus
+cd app/src-tauri && cargo tauri dev
+
+# Installer (.dmg/.app, .msi/.exe, .deb/.AppImage/.rpm) für das aktuelle System
+cd app/src-tauri && cargo tauri build
+
+# Nur die CLI
+cargo build --release -p llm-bridge-cli     # → target/release/llm-bridge
+```
+
+Installer für alle drei Plattformen baut der GitHub-Workflow `.github/workflows/release.yml` (bei einem Tag `v*` oder manuell).
+
+Die Oberfläche lässt sich ohne Tauri im Browser ansehen (`app/ui/index.html` öffnen) – sie läuft dann mit Demo-Daten.
+
 ### Tests
 
 ```bash
@@ -220,39 +266,50 @@ MacWhisper ──OpenAI──▶ LLM Bridge (127.0.0.1:4000/v1) ──Anthropic�
 - **Multilingual** (German, English; the system language is detected automatically)
 - Headless CLI for servers and scripts – shares configuration and statistics with the app
 
-### Project Layout
+### Installation
 
-| Path | Contents |
+Ready-made packages are available under [Releases](https://github.com/eqms/llm-bridge/releases/latest):
+
+| System | File |
 |---|---|
-| `crates/core` | Proxy logic as a library: configuration, translation, streaming, statistics, axum server |
-| `crates/cli` | The `llm-bridge` binary without a GUI |
-| `app/src-tauri` | Tauri backend: tray, windows, commands for the UI |
-| `app/ui` | User interface (HTML/CSS/JS, no build step), language files in `app/ui/locales/` |
+| macOS on Apple Silicon | `LLM-Bridge_<version>_aarch64.dmg` |
+| macOS on Intel | `LLM-Bridge_<version>_x64.dmg` |
+| Windows | `LLM-Bridge_<version>_x64-setup.exe` (or `.msi`) |
+| Linux | `.AppImage`, `.deb` or `.rpm` |
 
-### Building
+**macOS**: Open the DMG, drag *LLM Bridge* into *Applications* and launch it. The app is signed with a
+Developer ID and notarized by Apple, so it opens without a warning. It shows up as an icon in the
+menu bar.
 
-Requirements: Rust ≥ 1.90 and the [Tauri system dependencies](https://v2.tauri.app/start/prerequisites/). On Linux, for example:
+**Windows**: Run the installer. It is not signed, so Windows shows "Windows protected your PC".
+Choose *More info → Run anyway* to continue.
+
+**Linux**:
 
 ```bash
-sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev
+sudo apt install ./LLM-Bridge_*_amd64.deb                   # Debian, Ubuntu
+sudo dnf install ./LLM-Bridge-*.x86_64.rpm                  # Fedora, RHEL
+chmod +x LLM-Bridge_*.AppImage && ./LLM-Bridge_*.AppImage   # AppImage (needs libfuse2)
 ```
+
+The tray icon needs AppIndicator support in the desktop. On GNOME without Ubuntu's tweaks, install
+the "AppIndicator and KStatusNotifierItem Support" extension.
+
+**CLI only** (e.g. for servers): Download the binary for your system, make it executable and put it
+on the path. Available are `llm-bridge-aarch64-apple-darwin`, `llm-bridge-x86_64-apple-darwin`,
+`llm-bridge-x86_64-unknown-linux-gnu` and `llm-bridge-x86_64-pc-windows-msvc.exe`.
 
 ```bash
-cargo install tauri-cli --version "^2" --locked
-
-# Run the app in development mode
-cd app/src-tauri && cargo tauri dev
-
-# Installers (.dmg/.app, .msi/.exe, .deb/.AppImage/.rpm) for the current system
-cd app/src-tauri && cargo tauri build
-
-# CLI only
-cargo build --release -p llm-bridge-cli     # → target/release/llm-bridge
+curl -fLo llm-bridge https://github.com/eqms/llm-bridge/releases/latest/download/llm-bridge-x86_64-unknown-linux-gnu
+chmod +x llm-bridge && sudo mv llm-bridge /usr/local/bin/
+llm-bridge --version
 ```
 
-Installers for all three platforms are built by the GitHub workflow `.github/workflows/release.yml` (on a `v*` tag or manually).
+**Checksums**: Every release ships `SHA256SUMS`. Verify in the download folder with
+`shasum -a 256 -c --ignore-missing SHA256SUMS` (macOS) or `sha256sum -c --ignore-missing SHA256SUMS` (Linux).
 
-The UI can be previewed in a browser without Tauri (open `app/ui/index.html`); it then runs with demo data.
+From then on, app and CLI update themselves, see [Updates](#updates-1). If the CLI lives in a system
+directory such as `/usr/local/bin`, `llm-bridge update` needs write access there (`sudo`).
 
 ### Setup
 
@@ -344,6 +401,40 @@ The language then appears in the settings automatically.
 - Contents are not logged; logs contain only status and error messages.
 - Upstreams must use `https://`; `http://` is allowed for `localhost` only. Redirects from the upstream are not followed so the API key cannot be sent to a foreign target – the proxy reports the new address instead.
 - Configuration and statistics database are readable by the owning user only (0600, directory 0700).
+
+### Project Layout
+
+| Path | Contents |
+|---|---|
+| `crates/core` | Proxy logic as a library: configuration, translation, streaming, statistics, axum server |
+| `crates/cli` | The `llm-bridge` binary without a GUI |
+| `app/src-tauri` | Tauri backend: tray, windows, commands for the UI |
+| `app/ui` | User interface (HTML/CSS/JS, no build step), language files in `app/ui/locales/` |
+
+### Building from Source
+
+Requirements: Rust ≥ 1.90 and the [Tauri system dependencies](https://v2.tauri.app/start/prerequisites/). On Linux, for example:
+
+```bash
+sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev
+```
+
+```bash
+cargo install tauri-cli --version "^2" --locked
+
+# Run the app in development mode
+cd app/src-tauri && cargo tauri dev
+
+# Installers (.dmg/.app, .msi/.exe, .deb/.AppImage/.rpm) for the current system
+cd app/src-tauri && cargo tauri build
+
+# CLI only
+cargo build --release -p llm-bridge-cli     # → target/release/llm-bridge
+```
+
+Installers for all three platforms are built by the GitHub workflow `.github/workflows/release.yml` (on a `v*` tag or manually).
+
+The UI can be previewed in a browser without Tauri (open `app/ui/index.html`); it then runs with demo data.
 
 ### Tests
 
