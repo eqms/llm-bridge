@@ -1,5 +1,13 @@
 # LLM Bridge
 
+> **Language / Sprache**: [DE](#deutsche-dokumentation) | [EN](#english-documentation)
+
+---
+
+## Deutsche Dokumentation
+
+### Überblick
+
 Lokaler Mini-Proxy für macOS, Windows und Linux, der **OpenAI-Chat-Completions** in **Anthropic-Messages** übersetzt. Damit können Tools, die nur „OpenAI-kompatible“ Anbieter kennen – etwa MacWhisper –, Claude-Modelle über **LangDock** oder **Anthropic direkt** nutzen. Jede Anfrage wird mit ihrem Token-Verbrauch in einer lokalen Statistik erfasst.
 
 ```
@@ -8,7 +16,7 @@ MacWhisper ──OpenAI──▶ LLM Bridge (127.0.0.1:4000/v1) ──Anthropic�
                               └─▶ SQLite-Statistik (nur Metadaten, keine Inhalte)
 ```
 
-## Funktionen
+### Funktionen
 
 - OpenAI-Endpunkte `/v1/chat/completions` (mit und ohne Streaming) und `/v1/models`
 - Übersetzung von System-Prompts, Bildern (Base64), Tools/Function Calling, `stop`, `temperature`, `max_tokens`, JSON-Modus
@@ -20,7 +28,7 @@ MacWhisper ──OpenAI──▶ LLM Bridge (127.0.0.1:4000/v1) ──Anthropic�
 - **Mehrsprachig** (Deutsch, Englisch; automatische Erkennung der Systemsprache)
 - Headless-CLI für Server und Skripte – teilt Konfiguration und Statistik mit der App
 
-## Projektaufbau
+### Projektaufbau
 
 | Pfad | Inhalt |
 |---|---|
@@ -29,9 +37,9 @@ MacWhisper ──OpenAI──▶ LLM Bridge (127.0.0.1:4000/v1) ──Anthropic�
 | `app/src-tauri` | Tauri-Backend: Tray, Fenster, Befehle für die Oberfläche |
 | `app/ui` | Oberfläche (HTML/CSS/JS ohne Build-Schritt), Sprachdateien in `app/ui/locales/` |
 
-## Bauen
+### Bauen
 
-Voraussetzungen: Rust ≥ 1.87 und die [Tauri-Systemabhängigkeiten](https://v2.tauri.app/start/prerequisites/). Unter Linux z. B.:
+Voraussetzungen: Rust ≥ 1.90 und die [Tauri-Systemabhängigkeiten](https://v2.tauri.app/start/prerequisites/). Unter Linux z. B.:
 
 ```bash
 sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev
@@ -54,7 +62,7 @@ Installer für alle drei Plattformen baut der GitHub-Workflow `.github/workflows
 
 Die Oberfläche lässt sich ohne Tauri im Browser ansehen (`app/ui/index.html` öffnen) – sie läuft dann mit Demo-Daten.
 
-## Einrichtung
+### Einrichtung
 
 1. App starten. Beim ersten Start wird eine Konfiguration mit dem Upstream **LangDock EU** und dem Alias `haiku` angelegt.
 2. Unter **Upstreams** den LangDock-API-Schlüssel eintragen und „Schlüssel speichern“.
@@ -70,7 +78,7 @@ Die Oberfläche lässt sich ohne Tauri im Browser ansehen (`app/ui/index.html` �
 
 Statt eines Alias akzeptiert der Proxy auch `upstream-id/modell-id`, z. B. `langdock-eu/claude-sonnet-4-6-default`.
 
-## Konfiguration
+### Konfiguration
 
 Gespeichert als TOML (Pfad unter *Einstellungen → Über* bzw. `llm-bridge info`):
 
@@ -84,15 +92,17 @@ Beispiel: [`config.example.toml`](config.example.toml). Überschreibbar mit `LLM
 
 API-Schlüssel stehen nie in der Datei. Reihenfolge der Suche: Umgebungsvariable aus `api_key_env` → `LLM_BRIDGE_KEY_<ID>` (z. B. `LLM_BRIDGE_KEY_LANGDOCK_EU`) → Schlüsselbund.
 
-## CLI
+### CLI
 
 ```bash
-llm-bridge serve [--port 4000]      # Proxy im Vordergrund
+llm-bridge serve [--host H] [--port 4000]   # Proxy im Vordergrund
 llm-bridge set-key langdock-eu      # Schlüssel verdeckt eingeben → Schlüsselbund
+llm-bridge delete-key langdock-eu   # Schlüssel entfernen
 llm-bridge models langdock-eu       # Modell-IDs beim Upstream abfragen
 llm-bridge test haiku               # Verbindungstest
 llm-bridge stats --range 30d        # Statistik (24h, 7d, 30d, 90d, all; --json)
 llm-bridge export stats.csv         # CSV-Export
+llm-bridge reset-stats [--yes]      # Statistik löschen
 llm-bridge info                     # Pfade, Upstreams, Schlüsselquelle
 ```
 
@@ -105,13 +115,13 @@ ExecStart=/usr/local/bin/llm-bridge serve
 Restart=on-failure
 ```
 
-## Statistik
+### Statistik
 
 Pro Anfrage werden gespeichert: Zeitpunkt, Client, Alias, Upstream, Modell-ID, Input-, Output- und Cache-Tokens, Dauer, HTTP-Status, Streaming ja/nein, Fehlermeldung. **Prompt- und Antwortinhalte werden nicht gespeichert.** Bricht ein Client einen Stream ab, wird die Anfrage mit den bis dahin gezählten Tokens und Status 499 erfasst.
 
 Die Input-Tokens in der Oberfläche enthalten Cache-Lese- und -Schreib-Tokens, so wie OpenAI `prompt_tokens` zählt.
 
-## Weitere Sprache hinzufügen
+### Weitere Sprache hinzufügen
 
 1. `app/ui/locales/en.js` nach z. B. `fr.js` kopieren, `.en` durch `.fr` ersetzen und Texte übersetzen (`_name: "Français"`).
 2. In `app/ui/index.html` ein `<script src="locales/fr.js"></script>` ergänzen.
@@ -119,7 +129,7 @@ Die Input-Tokens in der Oberfläche enthalten Cache-Lese- und -Schreib-Tokens, s
 
 Die Sprache erscheint danach automatisch in den Einstellungen.
 
-## Sicherheit
+### Sicherheit
 
 - Der Server bindet standardmäßig nur an `127.0.0.1`.
 - Beim ersten Start wird ein zufälliges lokales Zugriffstoken erzeugt. Wer es in den Einstellungen leert, öffnet den Proxy für jedes Programm auf dem Rechner.
@@ -129,7 +139,7 @@ Die Sprache erscheint danach automatisch in den Einstellungen.
 - Upstreams müssen `https://` verwenden; `http://` ist nur für `localhost` erlaubt. Weiterleitungen des Upstreams werden nicht verfolgt, damit der API-Schlüssel nicht an ein fremdes Ziel geht – stattdessen meldet der Proxy die neue Adresse.
 - Konfiguration und Statistik-Datenbank sind nur für den eigenen Benutzer lesbar (0600, Verzeichnis 0700).
 
-## Tests
+### Tests
 
 ```bash
 cargo fmt --check                                  # rustfmt.toml: max_width 120
@@ -139,7 +149,7 @@ cargo test -p llm-bridge-core -- --ignored         # schreibt in den echten Schl
 cargo deny check                                   # Advisories, Lizenzen, Quellen (deny.toml)
 ```
 
-## Release
+### Release
 
 Ein Tag `v<Version>` (passend zu `version` in `Cargo.toml`) startet `.github/workflows/release.yml`:
 Prüfungen, Build für macOS (Apple Silicon und Intel), Windows und Linux, danach ein **Release-Entwurf**
@@ -158,6 +168,176 @@ Benötigte Repository-Secrets für die macOS-Signatur:
 | `APPLE_API_ISSUER` | Issuer-ID aus App Store Connect |
 | `APPLE_API_KEY_P8` | Inhalt der Datei `AuthKey_<Key-ID>.p8` |
 
-## Lizenz
+### Lizenz
+
+MIT © Martin Schmid
+
+---
+
+## English Documentation
+
+### Overview
+
+A small local proxy for macOS, Windows and Linux that translates **OpenAI Chat Completions** into **Anthropic Messages**. It lets tools that only know “OpenAI-compatible” providers – such as MacWhisper – use Claude models through **LangDock** or **Anthropic directly**. Every request is recorded in a local statistics database together with its token usage.
+
+```
+MacWhisper ──OpenAI──▶ LLM Bridge (127.0.0.1:4000/v1) ──Anthropic──▶ LangDock /anthropic/eu/v1/messages
+                              │
+                              └─▶ SQLite statistics (metadata only, no content)
+```
+
+### Features
+
+- OpenAI endpoints `/v1/chat/completions` (streaming and non-streaming) and `/v1/models`
+- Translation of system prompts, images (Base64), tools/function calling, `stop`, `temperature`, `max_tokens`, JSON mode
+- SSE streaming: Anthropic events → OpenAI chunks, including `stream_options.include_usage`
+- Errors in OpenAI format with a clear message (e.g. wrong model ID)
+- **Token statistics**: requests, input/output/cache tokens, response times – per hour/day, per model, per client (detected from the User-Agent), CSV export
+- API keys in the **system keychain** (macOS Keychain, Windows Credential Manager, Linux Secret Service), or via environment variable
+- Tray app (Tauri 2) with start/stop, autostart at login, live updates
+- **Multilingual** (German, English; the system language is detected automatically)
+- Headless CLI for servers and scripts – shares configuration and statistics with the app
+
+### Project Layout
+
+| Path | Contents |
+|---|---|
+| `crates/core` | Proxy logic as a library: configuration, translation, streaming, statistics, axum server |
+| `crates/cli` | The `llm-bridge` binary without a GUI |
+| `app/src-tauri` | Tauri backend: tray, windows, commands for the UI |
+| `app/ui` | User interface (HTML/CSS/JS, no build step), language files in `app/ui/locales/` |
+
+### Building
+
+Requirements: Rust ≥ 1.90 and the [Tauri system dependencies](https://v2.tauri.app/start/prerequisites/). On Linux, for example:
+
+```bash
+sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev
+```
+
+```bash
+cargo install tauri-cli --version "^2" --locked
+
+# Run the app in development mode
+cd app/src-tauri && cargo tauri dev
+
+# Installers (.dmg/.app, .msi/.exe, .deb/.AppImage/.rpm) for the current system
+cd app/src-tauri && cargo tauri build
+
+# CLI only
+cargo build --release -p llm-bridge-cli     # → target/release/llm-bridge
+```
+
+Installers for all three platforms are built by the GitHub workflow `.github/workflows/release.yml` (on a `v*` tag or manually).
+
+The UI can be previewed in a browser without Tauri (open `app/ui/index.html`); it then runs with demo data.
+
+### Setup
+
+1. Start the app. On first launch it creates a configuration with the **LangDock EU** upstream and the alias `haiku`.
+2. Under **Upstreams**, enter your LangDock API key and click “Save key”.
+3. Click “Fetch models”. The list shows the actual model IDs of your workspace. Clicking an ID creates a mapping. **The preset ID `claude-haiku-5-5-default` is an assumption and should be verified here.**
+4. Under **Models**, click “Test” (sends 1 token).
+5. In MacWhisper, add an OpenAI-compatible provider:
+
+| Field | Value |
+|---|---|
+| Base URL | `http://127.0.0.1:4000/v1` |
+| API key | the local access token (`lb-…`, generated on first launch; Settings → Copy). If the token is empty, any value works (e.g. `sk-local`) |
+| Model name | the alias, e.g. `haiku` |
+
+Instead of an alias, the proxy also accepts `upstream-id/model-id`, e.g. `langdock-eu/claude-sonnet-4-6-default`.
+
+### Configuration
+
+Stored as TOML (path shown under *Settings → About* or via `llm-bridge info`):
+
+| System | Configuration |
+|---|---|
+| macOS | `~/Library/Application Support/ai.it-guy.LLM-Bridge/config.toml` |
+| Windows | `%APPDATA%\it-guy\LLM Bridge\config\config.toml` |
+| Linux | `~/.config/llmbridge/config.toml` |
+
+Example: [`config.example.toml`](config.example.toml). Can be overridden with `LLM_BRIDGE_CONFIG` and `LLM_BRIDGE_DB`.
+
+API keys are never stored in the file. Lookup order: environment variable named in `api_key_env` → `LLM_BRIDGE_KEY_<ID>` (e.g. `LLM_BRIDGE_KEY_LANGDOCK_EU`) → keychain.
+
+### CLI
+
+```bash
+llm-bridge serve [--host H] [--port 4000]   # run the proxy in the foreground
+llm-bridge set-key langdock-eu      # enter the key hidden → keychain
+llm-bridge delete-key langdock-eu   # remove the key
+llm-bridge models langdock-eu       # list model IDs from the upstream
+llm-bridge test haiku               # connection test
+llm-bridge stats --range 30d        # statistics (24h, 7d, 30d, 90d, all; --json)
+llm-bridge export stats.csv         # CSV export
+llm-bridge reset-stats [--yes]      # delete statistics
+llm-bridge info                     # paths, upstreams, key source
+```
+
+Example for a Linux server with systemd:
+
+```ini
+[Service]
+Environment=LLM_BRIDGE_KEY_LANGDOCK_EU=sk-…
+ExecStart=/usr/local/bin/llm-bridge serve
+Restart=on-failure
+```
+
+### Statistics
+
+For each request the following is stored: timestamp, client, alias, upstream, model ID, input, output and cache tokens, duration, HTTP status, streaming yes/no, error message. **Prompt and response contents are not stored.** If a client aborts a stream, the request is recorded with the tokens counted so far and status 499.
+
+Input tokens in the UI include cache read and write tokens, matching how OpenAI counts `prompt_tokens`.
+
+### Adding Another Language
+
+1. Copy `app/ui/locales/en.js` to e.g. `fr.js`, replace `.en` with `.fr` and translate the texts (`_name: "Français"`).
+2. Add a `<script src="locales/fr.js"></script>` to `app/ui/index.html`.
+3. Optionally extend the tray texts in `app/src-tauri/src/tray.rs` (`fn texts`).
+
+The language then appears in the settings automatically.
+
+### Security
+
+- By default the server binds to `127.0.0.1` only.
+- A random local access token is generated on first launch. Clearing it in the settings opens the proxy to every program on the machine.
+- Requests from browsers are rejected: an `Origin` header must point to `localhost`/`127.0.0.1`/`[::1]`, and as long as the server listens locally only, the same applies to the `Host` header (protection against DNS rebinding). `/v1/chat/completions` requires `Content-Type: application/json`.
+- When binding to other addresses, a local access token should be set (the UI warns about this).
+- Contents are not logged; logs contain only status and error messages.
+- Upstreams must use `https://`; `http://` is allowed for `localhost` only. Redirects from the upstream are not followed so the API key cannot be sent to a foreign target – the proxy reports the new address instead.
+- Configuration and statistics database are readable by the owning user only (0600, directory 0700).
+
+### Tests
+
+```bash
+cargo fmt --check                                  # rustfmt.toml: max_width 120
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+cargo test -p llm-bridge-core -- --ignored         # writes to the real keychain
+cargo deny check                                   # advisories, licenses, sources (deny.toml)
+```
+
+### Release
+
+A tag `v<version>` (matching `version` in `Cargo.toml`) triggers `.github/workflows/release.yml`:
+checks, builds for macOS (Apple Silicon and Intel), Windows and Linux, then a **draft release**
+with all packages and `SHA256SUMS`. The draft is published manually.
+
+- **macOS**: app, DMG and CLI are signed with a Developer ID and notarized by Apple.
+- **Windows and Linux**: unsigned; checksums are listed in `SHA256SUMS`.
+
+Repository secrets required for macOS signing:
+
+| Secret | Contents |
+|---|---|
+| `APPLE_CERTIFICATE` | Developer ID Application certificate as `.p12`, Base64-encoded |
+| `APPLE_CERTIFICATE_PASSWORD` | Password of the `.p12` file |
+| `APPLE_API_KEY` | Key ID of the App Store Connect API key (notarization) |
+| `APPLE_API_ISSUER` | Issuer ID from App Store Connect |
+| `APPLE_API_KEY_P8` | Contents of the file `AuthKey_<Key-ID>.p8` |
+
+### License
 
 MIT © Martin Schmid

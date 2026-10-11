@@ -1,0 +1,9 @@
+# llm-bridge v0.1.0 | rust/tauri
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+▸ Proxy:    cargo run -p llm-bridge-cli -- serve
+▸ Info:     cargo run -p llm-bridge-cli -- info
+▸ App dev:  cd app/src-tauri && cargo tauri dev
+▸ Test:     cargo test --workspace
+▸ Lint:     cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings
+▸ Deny:     cargo deny check
+▸ Release:  git tag v<version> && git push upstream v<version>

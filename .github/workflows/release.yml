@@ -119,7 +119,26 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
         run: |
           mkdir dist
-          notarize() { xcrun notarytool submit "$1" --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER" --wait; }
+          auth=(--key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER")
+          # Submit once, then wait separately: a network drop while polling (seen on hosted
+          # runners) retries the wait instead of failing the job or submitting again.
+          notarize() {
+            local id status attempt
+            id=$(xcrun notarytool submit "$1" "${auth[@]}" --output-format json | jq -r .id)
+            [ -n "$id" ] && [ "$id" != null ] || { echo "::error::Submission of $1 failed"; return 1; }
+            echo "Submitted $1 as $id"
+            for attempt in 1 2 3 4 5 6; do
+              xcrun notarytool wait "$id" "${auth[@]}" --timeout 2h > /dev/null && break
+              echo "::warning::Waiting for $id failed (attempt $attempt), retrying in 60 s"
+              sleep 60
+            done
+            status=$(xcrun notarytool info "$id" "${auth[@]}" --output-format json | jq -r .status)
+            if [ "$status" != Accepted ]; then
+              echo "::error::Notarization of $1 ended with status $status"
+              xcrun notarytool log "$id" "${auth[@]}" || true
+              return 1
+            fi
+          }
           bin="target/$TARGET/release/llm-bridge"
           codesign --force --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY" "$bin"
           ditto -c -k "$bin" "dist/llm-bridge-cli-$TARGET.zip"
