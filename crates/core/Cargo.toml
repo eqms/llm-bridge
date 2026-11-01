@@ -23,7 +23,7 @@ bytes = "1"
 toml = "1"
 thiserror = "2"
 directories = "6"
-rusqlite = { version = "0.40", features = ["bundled"] }
+rusqlite = { version = "0.41", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
 url = "2"
 
@@ -32,7 +32,7 @@ url = "2"
 keyring = "4"
 http-body = "1"
 minisign-verify = "0.3"
-base64 = "0.22"
+base64 = "0.23"
 semver = "1"
 
 [dev-dependencies]
